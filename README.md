@@ -1,7 +1,5 @@
 # Halcyon
 
-documentation:
-
 # Halcyon — Documentation
 
 Halcyon is a Roblox UI library for script executors. Everything is built from plain `Instance`s, uses no external assets, and runs on `gethui()` / `CoreGui` / `PlayerGui` (whichever your executor allows).
