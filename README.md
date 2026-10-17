@@ -457,3 +457,6 @@ esp:AddKeybind({ Title = "Toggle key", Default = Enum.KeyCode.G, Callback = func
 end })
 
 Window:BuildConfigTab()
+
+```lua
+https://raw.githubusercontent.com/jkxxx2/Halcyon/refs/heads/main/Halcyon.lua
