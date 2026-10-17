@@ -21,18 +21,26 @@ What makes it different:
 
 ## 1. Loading
 
+Load Halcyon directly from the repository's **raw Lua file URL**:
+
+```lua
+local Halcyon = loadstring(game:HttpGet("https://raw.githubusercontent.com/jkxxx2/Halcyon/refs/heads/main/Halcyon.lua"))()
+```
+
+If you downloaded `Halcyon.lua` and want to load it from your executor's local file system instead, use:
+
 ```lua
 local Halcyon = loadstring(readfile("Halcyon.lua"))()
--- or host it and:
--- local Halcyon = loadstring(game:HttpGet("https://your.host/Halcyon.lua"))()
 ```
+
+The variable name is up to you. The examples in this documentation use `Halcyon`, so keep that name or update later references if you choose another one, such as `Library`.
 
 Re-executing the script destroys the previous Halcyon instance first, so you never get duplicate windows.
 
 ## 2. Quick start
 
 ```lua
-local Halcyon = loadstring(readfile("Halcyon.lua"))()
+local Halcyon = loadstring(game:HttpGet("https://raw.githubusercontent.com/jkxxx2/Halcyon/refs/heads/main/Halcyon.lua"))()
 
 local Window = Halcyon:CreateWindow({
     Title     = "My Hub",
@@ -437,7 +445,7 @@ Theme keys: `Background`, `Surface`, `Element`, `ElementHover`, `Stroke`, `Text`
 ## 13. Full example
 
 ```lua
-local Halcyon = loadstring(readfile("Halcyon.lua"))()
+local Halcyon = loadstring(game:HttpGet("https://raw.githubusercontent.com/jkxxx2/Halcyon/refs/heads/main/Halcyon.lua"))()
 local Window = Halcyon:CreateWindow({ Title = "Demo", Subtitle = "Halcyon", Folder = "DemoHub" })
 
 local Home = Window:AddTab({ Name = "Home", Icon = "H" })
@@ -457,4 +465,5 @@ esp:AddKeybind({ Title = "Toggle key", Default = Enum.KeyCode.G, Callback = func
 end })
 
 Window:BuildConfigTab()
+
 
