@@ -1,8 +1,5 @@
 # Halcyon
 
-```lua
-https://raw.githubusercontent.com/jkxxx2/Halcyon/refs/heads/main/Halcyon.lua
-
 documentation:
 
 # Halcyon — Documentation
