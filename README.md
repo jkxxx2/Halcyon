@@ -121,7 +121,11 @@ Halcyon:Notify({ Title = "Loaded", Content = "Press RightShift to toggle.", Type
 | `Window:LoadConfig(name)` | Loads a config. Returns `ok, err`. |
 | `Window:DeleteConfig(name)` | Deletes a config. Returns a boolean. |
 | `Window:ListConfigs()` | Returns an array of saved config names. |
-| `Window:BuildConfigTab(opts)` | Builds a ready-made Config tab (theme, accent, toggle key, save/load/delete). `opts.Name` (default `"Config"`), `opts.Icon`. |
+| `Window:HasConfig(name)` | Returns `true` if `<Folder>/<name>.json` exists. |
+| `Window:SetAutoLoad(name)` | Marks a saved config to load on startup. `nil` or `""` clears it. Returns `ok, err`. See section 8. |
+| `Window:GetAutoLoad()` | Returns the auto-load config name, or `nil` if none is set. |
+| `Window:RunAutoLoad()` | Loads the auto-load config now. Returns `true, name` or `false, err`. |
+| `Window:BuildConfigTab(opts)` | Builds a ready-made Config tab (theme, accent, toggle key, save/load/delete, auto-load toggle). `opts.Name` (default `"Config"`), `opts.Icon`, `opts.AutoLoad` (default `true`; set `false` to skip the startup load). |
 | `Window:Destroy()` | Removes this window and its connections. |
 
 Window interactions:
@@ -355,7 +359,40 @@ Config files are written to `<workspace>/<Folder>/<name>.json`. This needs `writ
 
 `Halcyon:ExportConfig()` / `Halcyon:ImportConfig(json)` work without a filesystem, so you can copy and paste a config string.
 
-`Window:BuildConfigTab()` gives you a finished UI for all of this, plus theme, accent, and toggle-key controls.
+`Window:BuildConfigTab()` gives you a finished UI for all of this, plus theme, accent, toggle-key, and auto-load controls.
+
+### Auto-load
+
+Auto-load applies a saved config automatically the next time the script runs, so your settings are restored without opening the menu.
+
+With the built-in Config tab:
+
+1. Save a config (type a name and press **Save**).
+2. Select it in **Saved configs** (or leave its name in **Config name**).
+3. Turn on the **Auto-load config** toggle. Its description shows which config will load.
+
+On the next execution, `Window:BuildConfigTab()` loads that config for you and shows a toast. Turn the toggle off to stop. Deleting the auto-load config also clears the setting.
+
+In code, without the Config tab:
+
+```lua
+Window:SaveConfig("main")
+Window:SetAutoLoad("main")          -- remember it
+print(Window:GetAutoLoad())         --> "main"
+
+-- on a later run, after all your elements are created:
+local ok, res = Window:RunAutoLoad()  -- true, "main"  /  false, "config not found"
+
+Window:SetAutoLoad(nil)             -- turn it off
+```
+
+Notes:
+
+- The choice is stored in `<Folder>/_autoload.txt`, next to your config files. It is not a `.json`, so it never shows up in `ListConfigs()`.
+- `BuildConfigTab()` defers the load until the rest of your script has finished building its elements. Only elements that have a `Flag` and already exist at that point are restored. If you create elements later (after a `task.wait`, say), pass `{ AutoLoad = false }` to `BuildConfigTab` and call `Window:RunAutoLoad()` yourself once everything exists.
+- Loading goes through the same path as **Load**, so element callbacks fire with the restored values.
+- Auto-load needs the same filesystem functions as configs. Without them, `SetAutoLoad` returns `false, "executor has no filesystem functions"` and `GetAutoLoad` returns `nil`.
+- The auto-load toggle itself has no `Flag`, so it is not stored inside configs.
 
 ---
 
@@ -463,5 +500,3 @@ esp:AddKeybind({ Title = "Toggle key", Default = Enum.KeyCode.G, Callback = func
 end })
 
 Window:BuildConfigTab()
-
-
