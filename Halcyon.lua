@@ -1,5 +1,5 @@
 --[[
-    Halcyon  -  Roblox UI library  -  v1.0.0
+    Halcyon  -  Roblox UI library  -  v1.1.0
 
     Load:   local Halcyon = loadstring(readfile("Halcyon.lua"))()
             -- or loadstring(game:HttpGet("<your raw url>"))()
@@ -28,7 +28,7 @@ local Players          = game:GetService("Players")
 local CoreGui          = game:GetService("CoreGui")
 
 local Halcyon = {
-    Version = "1.0.0",
+    Version = "1.1.0",
     Flags   = {},
     Windows = {},
     Themes  = {},
@@ -1634,6 +1634,50 @@ function Window:ListConfigs()
     return out
 end
 
+function Window:HasConfig(name)
+    return hasFS() and type(name) == "string" and name ~= "" and isfile(self:_path(name))
+end
+
+-- auto-load -------------------------------------------------------------
+-- The chosen config name lives in <Folder>/_autoload.txt (not a .json, so it never shows in ListConfigs).
+function Window:_autoPath() return self.Folder .. "/_autoload.txt" end
+
+function Window:GetAutoLoad()
+    if not hasFS() or not isfile(self:_autoPath()) then return nil end
+    local ok, raw = pcall(readfile, self:_autoPath())
+    if not ok then return nil end
+    local n = tostring(raw):match("^%s*(.-)%s*$")
+    if n == "" then return nil end
+    return n
+end
+
+function Window:SetAutoLoad(name)
+    if not hasFS() then return false, "executor has no filesystem functions" end
+    if name == nil or name == "" then
+        if isfile(self:_autoPath()) then
+            if type(delfile) == "function" then
+                pcall(delfile, self:_autoPath())
+            else
+                pcall(writefile, self:_autoPath(), "")
+            end
+        end
+        return true
+    end
+    if type(makefolder) == "function" and type(isfolder) == "function" and not isfolder(self.Folder) then
+        pcall(makefolder, self.Folder)
+    end
+    return pcall(writefile, self:_autoPath(), tostring(name))
+end
+
+-- Loads the auto-load config if one is set. Returns ok, nameOrErr. No config set -> false, "no auto-load config".
+function Window:RunAutoLoad()
+    local n = self:GetAutoLoad()
+    if not n then return false, "no auto-load config" end
+    local ok, err = self:LoadConfig(n)
+    if ok then return true, n end
+    return false, err
+end
+
 function Window:BuildConfigTab(opts)
     opts = opts or {}
     local win = self
@@ -1676,13 +1720,65 @@ function Window:BuildConfigTab(opts)
         local ok, err = win:LoadConfig(n)
         Halcyon:Notify({ Title = "Config", Content = ok and ("Loaded " .. n) or tostring(err), Type = ok and "Success" or "Error" })
     end })
+    local auto
+    local function autoDesc()
+        local cur = win:GetAutoLoad()
+        return cur and ("Loads \"" .. cur .. "\" on startup") or "Off"
+    end
     cfg:AddButton({ Title = "Delete", Callback = function()
         local n = pick()
         local ok = win:DeleteConfig(n)
+        if ok and n == win:GetAutoLoad() then
+            win:SetAutoLoad(nil)
+            auto:Set(false, true)
+            auto:SetDesc(autoDesc())
+        end
         dd:Refresh(win:ListConfigs(), false)
         Halcyon:Notify({ Title = "Config", Content = ok and ("Deleted " .. n) or "Nothing deleted", Type = ok and "Success" or "Warning" })
     end })
     cfg:AddButton({ Title = "Refresh list", Callback = function() dd:Refresh(win:ListConfigs(), true) end })
+
+    auto = cfg:AddToggle({
+        Title = "Auto-load config", Desc = autoDesc(), Default = win:GetAutoLoad() ~= nil,
+        Callback = function(on)
+            if not on then
+                win:SetAutoLoad(nil)
+                auto:SetDesc(autoDesc())
+                return
+            end
+            local n = pick()
+            if n == "" then
+                auto:Set(false, true)
+                Halcyon:Notify({ Title = "Auto-load", Content = "Pick or type a config name first.", Type = "Warning" })
+                return
+            end
+            if not win:HasConfig(n) then
+                auto:Set(false, true)
+                Halcyon:Notify({ Title = "Auto-load", Content = "Save \"" .. n .. "\" first.", Type = "Warning" })
+                return
+            end
+            local ok, err = win:SetAutoLoad(n)
+            if not ok then
+                auto:Set(false, true)
+                Halcyon:Notify({ Title = "Auto-load", Content = tostring(err), Type = "Error" })
+                return
+            end
+            auto:SetDesc(autoDesc())
+            Halcyon:Notify({ Title = "Auto-load", Content = "\"" .. n .. "\" loads on startup.", Type = "Success" })
+        end,
+    })
+
+    -- Deferred so the rest of the script finishes creating its elements before the config is applied.
+    if opts.AutoLoad ~= false and win:GetAutoLoad() then
+        task.defer(function()
+            if not win.Main or not win.Main.Parent then return end
+            local ok, res = win:RunAutoLoad()
+            Halcyon:Notify({
+                Title = "Auto-load", Content = ok and ("Loaded " .. res) or tostring(res),
+                Type = ok and "Success" or "Warning",
+            })
+        end)
+    end
     return tab
 end
 
